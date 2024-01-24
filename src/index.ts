@@ -14,6 +14,7 @@ let unvisited = []
 let commandQueue = []
 let startPos
 let endPos
+let squaresLeft = 0
 
 const diffToRotation = [[315,270,225],[0,0,180],[45,90,135]]
 
@@ -34,8 +35,12 @@ const rotationToPos = (rota: Rotation, pos: Location): Location => {
 
 }
 
+const determineRotation = (prev: Location, next: Location) => {
+  return diffToRotation[next.x-prev.x+1][next.y-prev.y+1]
+}
+
 const determineMove = (previousRotation: Rotation, currentLocation: Location, nextLocation: Location) => {
-  const neededRotation = diffToRotation[nextLocation.x-currentLocation.x+1][nextLocation.y-currentLocation.y+1]
+  const neededRotation = determineRotation(currentLocation, nextLocation)
   let commands = []
   if(neededRotation !== previousRotation) {
     commands.push({      
@@ -64,14 +69,11 @@ const addNeighbours = (node, nextNode) => {
 
   visited[nextNode.x][nextNode.y]["nextTo"].push({...node})
   visited[node.x][node.y]["nextTo"].push({...nextNode})
-} 
-
-const distanceToPoint = (node, target): number => {
-  return Math.abs(node.x-target.x) + Math.abs(node.y-target.y)
 }
 
-const BFSTwoPoints = (start, end, columns, rows) => {
-  const q = [start]
+const BFSNearest = (start, columns, rows, rotation) => {
+  let prevRotation = rotation
+  const q = [{node: start, rotation: prevRotation, distance: 0}]
   const d = new Array(columns)
   for(let i = 0; i < columns; i++) {
     d[i] = new Array(rows)
@@ -80,7 +82,50 @@ const BFSTwoPoints = (start, end, columns, rows) => {
 
   while(q.length > 0) {
     const u = q.shift()
-    if(u.x === end.x && u.y === end.y) {
+    prevRotation = u.rotation
+    if(unvisited.find((m) => {
+      return m.x === u["node"].x && m.y === u["node"].y
+    })) {
+      let route = [u["node"]]
+      let current = u["node"]
+      
+      while(true) {
+        current = d[current.x][current.y]
+        route.push(current)
+        if(current.x === start.x && current.y === start.y) {
+          return route.reverse()
+        }
+      }
+    }
+    for(const n of visited[u["node"].x][u["node"].y]["nextTo"]) {
+      if(!d[n.x][n.y]) {
+        let distance = u["distance"] + 1
+        const nextRotation = determineRotation(u["node"], n)
+        if(nextRotation !== prevRotation) {
+          distance++
+        }
+        q.push({node: n, rotation: nextRotation, distance: distance})
+        d[n.x][n.y] = u["node"]
+      }
+    }
+    q.sort((a,b) => a.distance - b.distance)
+  }
+  return null
+}
+
+const BFSTwoPoints = (start, end, columns, rows, rotation) => {
+  let prevRotation = rotation
+  const q = [{node: start, rotation: prevRotation, distance: 0}]
+  const d = new Array(columns)
+  for(let i = 0; i < columns; i++) {
+    d[i] = new Array(rows)
+    d[i].fill(null)
+  }
+
+  while(q.length > 0) {
+    const u = q.shift()
+    prevRotation = u.rotation
+    if(u["node"].x === end.x && u["node"].y === end.y) {
       let route = [end]
       let current = end
       while(true) {
@@ -91,12 +136,18 @@ const BFSTwoPoints = (start, end, columns, rows) => {
         }
       }
     }
-    for(const n of visited[u.x][u.y]["nextTo"]) {
+    for(const n of visited[u["node"].x][u["node"].y]["nextTo"]) {
       if(!d[n.x][n.y]) {
-        q.push(n)
-        d[n.x][n.y] = u
+        let distance = u["distance"] + 1
+        const nextRotation = determineRotation(u["node"], n)
+        if(nextRotation != prevRotation) {
+          distance++
+        }
+        q.push({node: n, rotation: nextRotation, distance: distance})
+        d[n.x][n.y] = u["node"]
       }
     }
+    q.sort((a,b) => a.distance - b.distance)
   }
   return null
 }
@@ -110,6 +161,9 @@ const generateAction = (gameState: NoWayOutState): Action => {
   const { player, square, rows, columns } = gameState
 
   if(!startPos) {
+    squaresLeft = columns*rows
+    console.log("Total nodes: "+squaresLeft)
+    console.log("------------------------------")
     const {start, target} = gameState
     startPos = start
     endPos = target
@@ -124,6 +178,13 @@ const generateAction = (gameState: NoWayOutState): Action => {
   const currentPosition = player.position
 
   visited[currentPosition.x][currentPosition.y]["visited"] = true
+
+  squaresLeft--
+
+  if(squaresLeft % 100 === 0) {
+    console.log("Unexplored nodes left: "+squaresLeft)
+    console.log("------------------------------")
+  }
 
   for(let i = 0; i < unvisited.length; i++) {
     if(unvisited[i].x === currentPosition.x && unvisited[i].y === currentPosition.y) {
@@ -142,7 +203,6 @@ const generateAction = (gameState: NoWayOutState): Action => {
     const adjacent = rotationToPos(dir, currentPosition)
 
     if(visited[adjacent.x][adjacent.y]["visited"] === true) {
-      console.log("already visited")
       continue
     }
 
@@ -172,15 +232,14 @@ const generateAction = (gameState: NoWayOutState): Action => {
   let route = []
   let previousRotation = gameState.startRotation
 
+  let extraCommand = null
+
   if(unvisited.length > 0) {
-    unvisited.sort((a,b) => {
-      return distanceToPoint(currentPosition,a) - distanceToPoint(currentPosition,b)
-    })
-    route = BFSTwoPoints(currentPosition, unvisited[0], columns, rows)
     previousRotation = player.rotation
+    route = BFSNearest(currentPosition, columns, rows, previousRotation)
   } else {
-    commandQueue.push({action: "reset"})
-    route = BFSTwoPoints(startPos, endPos, columns, rows)
+    commandQueue = [{action: "reset"}]
+    route = BFSTwoPoints(startPos, endPos, columns, rows, previousRotation)
   }
 
   for(let i = 1; i < route.length; i++) {
