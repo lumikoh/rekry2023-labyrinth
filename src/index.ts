@@ -101,7 +101,6 @@ const BFSTwoPoints = (start, end, columns, rows) => {
       let route = [end]
       let current = end
       while(true) {
-        console.log("test")
         current = d[current.x][current.y]
         route.push(current)
         if(current.x === start.x && current.y === start.y) {
@@ -120,7 +119,6 @@ const BFSTwoPoints = (start, end, columns, rows) => {
 }
 
 
-// Change this to your own implementation
 const generateAction = (gameState: NoWayOutState): Action => {
 
   if (commandQueue.length !== 0) {
@@ -142,7 +140,6 @@ const generateAction = (gameState: NoWayOutState): Action => {
   }
 
   const currentPosition = player.position
-  //console.log(currentPosition)
 
   visited[currentPosition.x][currentPosition.y]["visited"] = true
 
@@ -158,8 +155,6 @@ const generateAction = (gameState: NoWayOutState): Action => {
   const possibleDirections = Object.entries(walls)
     .filter(([_, wall]) => !wall)
     .map(([rotation]) => parseInt(rotation) as Rotation)
-
-  // console.log(possibleDirections)
 
   for(const dir of possibleDirections) {
     const adjacent = rotationToPos(dir, currentPosition)
@@ -208,37 +203,9 @@ const generateAction = (gameState: NoWayOutState): Action => {
     }
   }
 
-  console.log(commandQueue)
-
   if (commandQueue.length !== 0) {
     return commandQueue.shift() as Action
   }
-
-  // console.log(unvisited[0])
-
-  // if(unvisited.length !== 0) {
-  //   unvisited.sort(function(a,b){return a.distance - b.distance})
-  //   const nextNode = unvisited.shift()
-  //   currentRoute = routes[nextNode.x][nextNode.y]["route"].slice()
-  // } else {
-  //   currentRoute = combineBestRoute()
-  // }
-
-  // let previousRotation = 0 as Rotation
-  // for (let i = 1; i < currentRoute.length; i++) {
-  //   console.log(i)
-  //   const actions = determineMove({position: currentRoute[i-1], rotation: previousRotation}, currentRoute[i])
-    
-  //   if(actions.length == 2) {
-  //     previousRotation = actions[0].rotation
-  //   }
-  //   commandQueue = commandQueue.concat(actions)
-  
-  // }
-  
-  // currentLen = currentRoute.length-1
-
-  // console.log(commandQueue)
 
   return {
     action: 'reset',
