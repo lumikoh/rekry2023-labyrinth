@@ -49,27 +49,10 @@ const determineMove = (previousRotation: Rotation, currentLocation: Location, ne
 
 }
 
-const canBeTrimmed = (routeTrimmed) => {
-  if(routeTrimmed.length > 2) {
-    const lastRoute = routeTrimmed[routeTrimmed.length-1]
-    const twoBack = routeTrimmed[routeTrimmed.length-3]
-    if(Math.abs(twoBack.x-lastRoute.x) === 1 && Math.abs(twoBack.y-lastRoute.y) === 1) {
-      return true
-    }
-  }
-  return false
-}
+const canBeTrimmed = (node, otherNode) => {
+  return Math.abs(node.x-otherNode.x) === 1 && 
+         Math.abs(node.y-otherNode.y) === 1
 
-const combineBestRoute = () => {
-  let route = []
-  let currentNode = endPos
-  while(true) {
-    route.push(currentNode)
-    if(currentNode.x === startPos.x && currentNode.y === startPos.y) {
-      break
-    }
-  }
-  return route.reverse()
 }
 
 const addNeighbours = (node, nextNode) => {
@@ -125,7 +108,6 @@ const generateAction = (gameState: NoWayOutState): Action => {
     return commandQueue.shift() as Action
   }
   const { player, square, rows, columns } = gameState
-  const { rotation } = player
 
   if(!startPos) {
     const {start, target} = gameState
@@ -179,7 +161,13 @@ const generateAction = (gameState: NoWayOutState): Action => {
     addNeighbours(currentPosition, adjacent)
 
   }
-
+  for(const n of visited[currentPosition.x][currentPosition.y]["nextTo"]) {
+    for(const nn of visited[n.x][n.y]["nextTo"]) {
+      if(canBeTrimmed(currentPosition, nn)) {
+        addNeighbours(currentPosition, nn)
+      }
+    }
+  }
 
   let route = []
   let previousRotation = gameState.startRotation
