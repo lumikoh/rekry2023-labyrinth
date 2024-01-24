@@ -9,9 +9,6 @@ import { getWalls } from './utils/walls.js'
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
 
-let routes = []
-let currentRoute = []
-let currentLen = 0
 let visited = []
 let unvisited = []
 let commandQueue = []
@@ -37,10 +34,10 @@ const rotationToPos = (rota: Rotation, pos: Location): Location => {
 
 }
 
-const determineMove = (player: Player, nextLocation: Location) => {
-  const neededRotation = diffToRotation[nextLocation.x-player.position.x+1][nextLocation.y-player.position.y+1]
+const determineMove = (previousRotation: Rotation, currentLocation: Location, nextLocation: Location) => {
+  const neededRotation = diffToRotation[nextLocation.x-currentLocation.x+1][nextLocation.y-currentLocation.y+1]
   let commands = []
-  if(neededRotation !== player.rotation) {
+  if(neededRotation !== previousRotation) {
     commands.push({      
       action: 'rotate',
       rotation: neededRotation})
@@ -71,11 +68,57 @@ const combineBestRoute = () => {
     if(currentNode.x === startPos.x && currentNode.y === startPos.y) {
       break
     }
-    const routeLen = routes[currentNode.x][currentNode.y]["route"].length
-    currentNode = routes[currentNode.x][currentNode.y]["route"][routeLen-2]
   }
   return route.reverse()
 }
+
+const addNeighbours = (node, nextNode) => {
+  if(visited[nextNode.x][nextNode.y]["nextTo"].find((a) => {
+    return a.x === node.x && a.y === node.y
+  })) {
+    return
+  }
+
+  visited[nextNode.x][nextNode.y]["nextTo"].push({...node})
+  visited[node.x][node.y]["nextTo"].push({...nextNode})
+} 
+
+const distanceToPoint = (node, target): number => {
+  return Math.abs(node.x-target.x) + Math.abs(node.y-target.y)
+}
+
+const BFSTwoPoints = (start, end, columns, rows) => {
+  const q = [start]
+  const d = new Array(columns)
+  for(let i = 0; i < columns; i++) {
+    d[i] = new Array(rows)
+    d[i].fill(null)
+  }
+
+  while(q.length > 0) {
+    const u = q.shift()
+    if(u.x === end.x && u.y === end.y) {
+      let route = [end]
+      let current = end
+      while(true) {
+        console.log("test")
+        current = d[current.x][current.y]
+        route.push(current)
+        if(current.x === start.x && current.y === start.y) {
+          return route.reverse()
+        }
+      }
+    }
+    for(const n of visited[u.x][u.y]["nextTo"]) {
+      if(!d[n.x][n.y]) {
+        q.push(n)
+        d[n.x][n.y] = u
+      }
+    }
+  }
+  return null
+}
+
 
 // Change this to your own implementation
 const generateAction = (gameState: NoWayOutState): Action => {
@@ -83,32 +126,25 @@ const generateAction = (gameState: NoWayOutState): Action => {
   if (commandQueue.length !== 0) {
     return commandQueue.shift() as Action
   }
-  const { player, square } = gameState
+  const { player, square, rows, columns } = gameState
   const { rotation } = player
 
   if(!startPos) {
-    const {start, target, rows, columns} = gameState
+    const {start, target} = gameState
     startPos = start
     endPos = target
     for (let i = 0; i < columns; i++) {
-      routes.push([])
       visited.push([])
       for (let j = 0; j < rows; j++) {
-        routes[i].push({len: 9999, route: []})
-        visited[i].push(false)
+        visited[i].push({visited: false, nextTo: []})
       }
     }
-    visited[start.x][start.y] = true
-    routes[start.x][start.y] = {len: 0, route: []}
-    currentRoute = [start]
-
-    //console.log(visited)
   }
 
   const currentPosition = player.position
   //console.log(currentPosition)
 
-  visited[currentPosition.x][currentPosition.y] = true
+  visited[currentPosition.x][currentPosition.y]["visited"] = true
 
   for(let i = 0; i < unvisited.length; i++) {
     if(unvisited[i].x === currentPosition.x && unvisited[i].y === currentPosition.y) {
@@ -125,85 +161,84 @@ const generateAction = (gameState: NoWayOutState): Action => {
 
   // console.log(possibleDirections)
 
-  let nextMove = null
-
   for(const dir of possibleDirections) {
     const adjacent = rotationToPos(dir, currentPosition)
 
-    if(visited[adjacent.x][adjacent.y]) {
+    if(visited[adjacent.x][adjacent.y]["visited"] === true) {
+      console.log("already visited")
       continue
     }
 
-    if(routes[adjacent.x][adjacent.y]["len"] < currentLen + 1) {
-      // console.log(routes[adjacent.x][adjacent.y]["len"])
-      continue
-    } else {
-      routes[adjacent.x][adjacent.y] = {len: currentLen +1, route: currentRoute.concat([adjacent])}
-    }
-
-    // console.log(adjacent)
-
-    if(!nextMove && 
-      !(endPos.x === adjacent.x && endPos.y === adjacent.y)) {
-        console.log("test")
-        nextMove = adjacent
-
-    } else {
-
-      let nodeExists = false
-      for(const node of unvisited) {
-        if(node.x === adjacent.x && node.y === adjacent.y) {
-          nodeExists = true
-          break
-        }
-      }
-
-      if(!nodeExists && !(endPos.x === adjacent.x && endPos.y === adjacent.y)) {
-        unvisited.push({...adjacent, distance: currentLen+1})
+    let nodeExists = false
+    for(const node of unvisited) {
+      if(node.x === adjacent.x && node.y === adjacent.y) {
+        nodeExists = true
+        break
       }
     }
 
+    if(!nodeExists && !(endPos.x === adjacent.x && endPos.y === adjacent.y)) {
+      unvisited.push(adjacent)
+    }
+
+    addNeighbours(currentPosition, adjacent)
+
   }
-  currentRoute.push(nextMove)
-  if(nextMove) {
-    commandQueue = determineMove(player, nextMove)
+
+
+  let route = []
+  let previousRotation = gameState.startRotation
+
+  if(unvisited.length > 0) {
+    unvisited.sort((a,b) => {
+      return distanceToPoint(currentPosition,a) - distanceToPoint(currentPosition,b)
+    })
+    route = BFSTwoPoints(currentPosition, unvisited[0], columns, rows)
+    previousRotation = player.rotation
+  } else {
+    commandQueue.push({action: "reset"})
+    route = BFSTwoPoints(startPos, endPos, columns, rows)
   }
+
+  for(let i = 1; i < route.length; i++) {
+    const commands = determineMove(previousRotation, route[i-1], route[i])
+    commandQueue = commandQueue.concat(commands)
+    if(commands.length === 2) {
+      previousRotation = commands[0]["rotation"]
+    }
+  }
+
   console.log(commandQueue)
 
   if (commandQueue.length !== 0) {
-    currentLen++
     return commandQueue.shift() as Action
   }
 
-  console.log("moving")
+  // console.log(unvisited[0])
 
-  console.log(currentLen)
+  // if(unvisited.length !== 0) {
+  //   unvisited.sort(function(a,b){return a.distance - b.distance})
+  //   const nextNode = unvisited.shift()
+  //   currentRoute = routes[nextNode.x][nextNode.y]["route"].slice()
+  // } else {
+  //   currentRoute = combineBestRoute()
+  // }
 
-  console.log(unvisited[0])
-
-  if(unvisited.length !== 0) {
-    unvisited.sort(function(a,b){return a.distance - b.distance})
-    const nextNode = unvisited.shift()
-    currentRoute = routes[nextNode.x][nextNode.y]["route"].slice()
-  } else {
-    currentRoute = combineBestRoute()
-  }
-
-  let previousRotation = 0 as Rotation
-  for (let i = 1; i < currentRoute.length; i++) {
-    console.log(i)
-    const actions = determineMove({position: currentRoute[i-1], rotation: previousRotation}, currentRoute[i])
+  // let previousRotation = 0 as Rotation
+  // for (let i = 1; i < currentRoute.length; i++) {
+  //   console.log(i)
+  //   const actions = determineMove({position: currentRoute[i-1], rotation: previousRotation}, currentRoute[i])
     
-    if(actions.length == 2) {
-      previousRotation = actions[0].rotation
-    }
-    commandQueue = commandQueue.concat(actions)
+  //   if(actions.length == 2) {
+  //     previousRotation = actions[0].rotation
+  //   }
+  //   commandQueue = commandQueue.concat(actions)
   
-  }
+  // }
   
-  currentLen = currentRoute.length-1
+  // currentLen = currentRoute.length-1
 
-  console.log(commandQueue)
+  // console.log(commandQueue)
 
   return {
     action: 'reset',
