@@ -110,7 +110,9 @@ const BFSNearest = (start, columns, rows, rotation) => {
   const d = new Array(columns)
   for(let i = 0; i < columns; i++) {
     d[i] = new Array(rows)
-    d[i].fill(null)
+    for(let j = 0; j < rows; j++) {
+      d[i][j] = {node: null, distance: 9999999}
+    }
   }
 
   while(q.length > 0) {
@@ -123,7 +125,7 @@ const BFSNearest = (start, columns, rows, rotation) => {
       let current = u["node"]
       
       while(true) {
-        current = d[current.x][current.y]
+        current = d[current.x][current.y]["node"]
         route.push(current)
         if(current.x === start.x && current.y === start.y) {
           return route.reverse()
@@ -131,14 +133,15 @@ const BFSNearest = (start, columns, rows, rotation) => {
       }
     }
     for(const n of visited[u["node"].x][u["node"].y]["nextTo"]) {
-      if(!d[n.x][n.y]) {
-        let distance = u["distance"] + 1
-        const nextRotation = determineRotation(u["node"], n)
+      let distance = u["distance"] + 1
+      const nextRotation = determineRotation(u["node"], n)
         if(nextRotation !== prevRotation) {
-          distance++
+          distance = distance + 1.5
         }
+      if(d[n.x][n.y]["distance"] > distance) {
         q.push({node: n, rotation: nextRotation, distance: distance})
-        d[n.x][n.y] = u["node"]
+        d[n.x][n.y]["node"] = u["node"]
+        d[n.x][n.y]["distance"] = distance
       }
     }
     q.sort((a,b) => a.distance - b.distance)
@@ -152,7 +155,9 @@ const BFSTwoPoints = (start, end, columns, rows, rotation) => {
   const d = new Array(columns)
   for(let i = 0; i < columns; i++) {
     d[i] = new Array(rows)
-    d[i].fill(null)
+    for(let j = 0; j < rows; j++) {
+      d[i][j] = {node: null, distance: 9999999}
+    }
   }
 
   while(q.length > 0) {
@@ -162,7 +167,7 @@ const BFSTwoPoints = (start, end, columns, rows, rotation) => {
       let route = [end]
       let current = end
       while(true) {
-        current = d[current.x][current.y]
+        current = d[current.x][current.y]["node"]
         route.push(current)
         if(current.x === start.x && current.y === start.y) {
           return route.reverse()
@@ -170,14 +175,15 @@ const BFSTwoPoints = (start, end, columns, rows, rotation) => {
       }
     }
     for(const n of visited[u["node"].x][u["node"].y]["nextTo"]) {
-      if(!d[n.x][n.y]) {
-        let distance = u["distance"] + 1
-        const nextRotation = determineRotation(u["node"], n)
-        if(nextRotation != prevRotation) {
-          distance++
+      let distance = u["distance"] + 1
+      const nextRotation = determineRotation(u["node"], n)
+        if(nextRotation !== prevRotation) {
+          distance = distance + 1.5
         }
+      if(d[n.x][n.y]["distance"] > distance) {
         q.push({node: n, rotation: nextRotation, distance: distance})
-        d[n.x][n.y] = u["node"]
+        d[n.x][n.y]["node"] = u["node"]
+        d[n.x][n.y]["distance"] = distance
       }
     }
     q.sort((a,b) => a.distance - b.distance)
@@ -280,6 +286,7 @@ const generateAction = (gameState: NoWayOutState): Action => {
   } else {
     commandQueue = [{action: "reset"}]
     route = BFSTwoPoints(startPos, endPos, columns, rows, previousRotation)
+    console.log(visited[7][18])
   }
 
   for(let i = 1; i < route.length; i++) {
