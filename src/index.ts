@@ -71,6 +71,39 @@ const addNeighbours = (node, nextNode) => {
   visited[node.x][node.y]["nextTo"].push({...nextNode})
 }
 
+const isNodeSurrounded = (node, columns, rows) => {
+
+  for (let i = 0; i < 3; i++) {
+    for(let j = 0; j < 3; j++) {
+      if(i === 1 && j === 1) {
+        continue
+      }
+      const row = node.x -1 + i
+      const column = node.y -1 + j
+      if(row < 0 || column < 0 || row+1 > rows || column+1 > columns) {
+        continue
+      }
+
+      if(!visited[row][column]["visited"]) {
+        return false
+      }
+
+    }
+    
+  }
+
+  for (let i = 0; i < unvisited.length; i++) {
+    if(unvisited[i].x === node.x && unvisited[i].y === node.y) {
+      unvisited.splice(i, 1)
+      break
+    }
+    
+  }
+  visited[node.x][node.y]["visited"] = true
+
+  return true
+}
+
 const BFSNearest = (start, columns, rows, rotation) => {
   let prevRotation = rotation
   const q = [{node: start, rotation: prevRotation, distance: 0}]
@@ -85,7 +118,7 @@ const BFSNearest = (start, columns, rows, rotation) => {
     prevRotation = u.rotation
     if(unvisited.find((m) => {
       return m.x === u["node"].x && m.y === u["node"].y
-    })) {
+    }) && !isNodeSurrounded(u["node"],columns,rows)) {
       let route = [u["node"]]
       let current = u["node"]
       
@@ -232,11 +265,18 @@ const generateAction = (gameState: NoWayOutState): Action => {
   let route = []
   let previousRotation = gameState.startRotation
 
-  let extraCommand = null
+  const routeFromCurrent = BFSNearest(currentPosition, columns, rows, previousRotation)
+  const routeFromStart = BFSNearest(startPos,columns,rows,gameState.startRotation)
 
   if(unvisited.length > 0) {
-    previousRotation = player.rotation
-    route = BFSNearest(currentPosition, columns, rows, previousRotation)
+    
+    if(routeFromCurrent.length > routeFromStart.length + 1) {
+      route = routeFromStart
+      commandQueue = [{action: "reset"}]
+    } else {
+      previousRotation = player.rotation
+      route = routeFromCurrent
+    }
   } else {
     commandQueue = [{action: "reset"}]
     route = BFSTwoPoints(startPos, endPos, columns, rows, previousRotation)
