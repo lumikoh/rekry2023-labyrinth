@@ -9,6 +9,7 @@ import { getWalls } from './utils/walls.js'
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
 
+// A different kind of 
 let visited = []
 let unvisited = []
 let commandQueue = []
@@ -332,7 +333,7 @@ const main = async () => {
 
   const url = `https://${frontend_base}/?id=${game.entityId}`
   console.log(`Game at ${url}`)
-  await open(url) // Remove this if you don't want to open the game in browser
+  //await open(url) // Remove this if you don't want to open the game in browser
 
   await new Promise((f) => setTimeout(f, 2000))
   const ws = new WebSocket(`wss://${backend_base}/${token}/`)
