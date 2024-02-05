@@ -10,6 +10,11 @@ export type Player = {
   rotation: Rotation
 }
 
+export type VisitedNode = {
+  visited: boolean
+  nextTo: Location[]
+}
+
 export interface NoWayOutState {
   player: Player
   moves: number
