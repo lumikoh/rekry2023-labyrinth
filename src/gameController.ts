@@ -112,7 +112,15 @@ export const queueActions = (gameState: NoWayOutState): Action[] => {
   } else {
     commandQueue = [{ action: 'reset' }]
     route = dijkstraTwoPoints(startPos, endPos, columns, rows, previousRotation, visited)
-    console.log(visited[7][18])
+    for (const x of route) {
+      console.log(x)
+      let z = '  '
+      for (const y of visited[x.x][x.y]['nextTo']) {
+        z += '|x: ' + y.x + ' y: ' + y.y + ' '
+      }
+      console.log(z)
+      console.log('----------------------------')
+    }
   }
 
   for (let i = 1; i < route.length; i++) {

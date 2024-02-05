@@ -1,5 +1,7 @@
 import type { Rotation, Location, VisitedNode } from '../types.js'
-import { determineRotation } from './calculations.js'
+import { canContinueStraight, determineRotation } from './calculations.js'
+
+let maxDistance: number = 999999999
 
 const isNodeSurrounded = (
   node: Location,
@@ -50,7 +52,7 @@ export const dijkstraTwoPoints = (
   for (let i = 0; i < columns; i++) {
     d[i] = new Array(rows)
     for (let j = 0; j < rows; j++) {
-      d[i][j] = { node: null, distance: 9999999 }
+      d[i][j] = { node: null, distance: maxDistance }
     }
   }
 
@@ -72,7 +74,7 @@ export const dijkstraTwoPoints = (
       let distance = u['distance'] + 1
       const nextRotation = determineRotation(u['node'], n)
       if (nextRotation !== prevRotation) {
-        distance = distance + 1.5
+        distance = distance + 1
       }
       if (d[n.x][n.y]['distance'] > distance) {
         q.push({ node: n, rotation: nextRotation, distance: distance })
@@ -80,7 +82,18 @@ export const dijkstraTwoPoints = (
         d[n.x][n.y]['distance'] = distance
       }
     }
-    q.sort((a, b) => a.distance - b.distance)
+    q.sort((a, b) => {
+      if (a.distance - b.distance !== 0) {
+        return a.distance - b.distance
+      }
+      if (canContinueStraight(a.node, a.rotation, visited)) {
+        return -0.5
+      } else if (canContinueStraight(b.node, b.rotation, visited)) {
+        return 0.5
+      } else {
+        return 0
+      }
+    })
   }
   return null
 }
@@ -99,7 +112,7 @@ export const dijkstraNearest = (
   for (let i = 0; i < columns; i++) {
     d[i] = new Array(rows)
     for (let j = 0; j < rows; j++) {
-      d[i][j] = { node: null, distance: 9999999 }
+      d[i][j] = { node: null, distance: maxDistance }
     }
   }
 
@@ -127,7 +140,7 @@ export const dijkstraNearest = (
       let distance = u['distance'] + 1
       const nextRotation = determineRotation(u['node'], n)
       if (nextRotation !== prevRotation) {
-        distance = distance + 1.5
+        distance = distance + 1
       }
       if (d[n.x][n.y]['distance'] > distance) {
         q.push({ node: n, rotation: nextRotation, distance: distance })
@@ -135,7 +148,9 @@ export const dijkstraNearest = (
         d[n.x][n.y]['distance'] = distance
       }
     }
-    q.sort((a, b) => a.distance - b.distance)
+    q.sort((a, b) => {
+      return a.distance - b.distance
+    })
   }
   return null
 }
