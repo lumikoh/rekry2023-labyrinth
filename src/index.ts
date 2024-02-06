@@ -9,9 +9,16 @@ import { queueActions, setupGame } from './gameController.js'
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
 
+// This is used as a slightly hacky solutions to keep executing actions one
+// by one within the frame of the given template.
 let commandQueue: Array<Action> = []
 let gameRunning: boolean = false
 
+/**
+ * Generates the next Action needed to traverse the labyrinth
+ * @param gameState current game state (NoWayOutState)
+ * @returns The next Action
+ */
 const generateAction = (gameState: NoWayOutState): Action => {
   if (commandQueue.length !== 0) {
     return commandQueue.shift() as Action
@@ -34,6 +41,12 @@ const generateAction = (gameState: NoWayOutState): Action => {
   }
 }
 
+/**
+ * Generates a new game based on the given level id and player token.
+ * @param levelId level id for the game as a string
+ * @param token player token as a string
+ * @returns A promise of the GameInstance
+ */
 const createGame = async (levelId: string, token: string): Promise<GameInstance> => {
   const res = await fetch(`https://${backend_base}/api/levels/${levelId}`, {
     method: 'POST',
@@ -50,6 +63,9 @@ const createGame = async (levelId: string, token: string): Promise<GameInstance>
   return res.json() as Promise<GameInstance>
 }
 
+/**
+ * Controls the main flow of the game
+ */
 const main = async () => {
   const token = process.env['PLAYER_TOKEN'] ?? ''
   const levelId = process.env['LEVEL_ID'] ?? ''

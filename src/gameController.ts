@@ -8,6 +8,11 @@ let startPos: Location
 let endPos: Location
 let squaresLeft: number = 0
 
+/**
+ * Adds two nodes as neighbours, if the weren't added yet
+ * @param node The first Location
+ * @param nextNode The other Location
+ */
 const addNeighbours = (node: Location, nextNode: Location) => {
   if (
     visited[nextNode.x][nextNode.y]['nextTo'].find((a: Location) => {
@@ -21,6 +26,10 @@ const addNeighbours = (node: Location, nextNode: Location) => {
   visited[node.x][node.y]['nextTo'].push({ ...nextNode })
 }
 
+/**
+ * Sets up the necessary parameters needed when a new game is started
+ * @param gameState the current game state (NoWayOutState)
+ */
 export const setupGame = (gameState: NoWayOutState) => {
   const { rows, columns, start, target } = gameState
 
@@ -37,6 +46,14 @@ export const setupGame = (gameState: NoWayOutState) => {
   }
 }
 
+/**
+ * Controls the flow of the graph traversal. Determines the next best move to
+ * map the graph, or if all known nodes are visited, finds the best route from
+ * start to finish. Returns an array of Actions needed to get to the next
+ * interesting point.
+ * @param gameState the current game state (NoWayOutState)
+ * @returns an Array of actions
+ */
 export const queueActions = (gameState: NoWayOutState): Action[] => {
   let commandQueue: Action[] = []
 

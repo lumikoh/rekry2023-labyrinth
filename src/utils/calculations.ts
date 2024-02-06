@@ -1,9 +1,10 @@
-import type { Rotation, Location, VisitedNode } from '../types.js'
+import type { Rotation, Location, Action } from '../types.js'
 
 export type Walls = Partial<{
   [key in Rotation]: boolean
 }>
 
+// Helper to convert values between indexes and rotations
 const diffToRotation: Rotation[][] = [
   [315, 270, 225],
   [0, 0, 180],
@@ -26,6 +27,13 @@ export const getWalls = (square: number): Walls => {
   }
 }
 
+/**
+ * Determines the adjacent location based on the rotation needed to move
+ * to it
+ * @param rotation current Rotation
+ * @param position current Location
+ * @returns the determined Location
+ */
 export const rotationToPosition = (rotation: Rotation, position: Location): Location => {
   let x = -1
   let y = -1
@@ -39,13 +47,30 @@ export const rotationToPosition = (rotation: Rotation, position: Location): Loca
   return { x: 0, y: 0 }
 }
 
+/**
+ * Determines the Rotation needed to move between two Locations
+ * @param prev current Location
+ * @param next next Location
+ * @returns the determined Rotation
+ */
 export const determineRotation = (prev: Location, next: Location): Rotation => {
   return diffToRotation[next.x - prev.x + 1][next.y - prev.y + 1]
 }
 
-export const determineMove = (previousRotation: Rotation, currentLocation: Location, nextLocation: Location) => {
-  const neededRotation = determineRotation(currentLocation, nextLocation)
-  let commands = []
+/**
+ * Generates Actions needed to move between two Locations.
+ * @param previousRotation current Rotation
+ * @param previousLocation current Location
+ * @param nextLocation next Location
+ * @returns an array of Actions
+ */
+export const determineMove = (
+  previousRotation: Rotation,
+  previousLocation: Location,
+  nextLocation: Location
+): Action[] => {
+  const neededRotation = determineRotation(previousLocation, nextLocation)
+  let commands: Action[] = []
   if (neededRotation !== previousRotation) {
     commands.push({
       action: 'rotate',
@@ -58,14 +83,12 @@ export const determineMove = (previousRotation: Rotation, currentLocation: Locat
   return commands
 }
 
+/**
+ * Determines whether two Locations are diagonally aligned
+ * @param node first Location
+ * @param otherNode the other Location
+ * @returns true if the Locations are diagonally aligned, false otherwise
+ */
 export const canCutCorner = (node: Location, otherNode: Location): boolean => {
   return Math.abs(node.x - otherNode.x) === 1 && Math.abs(node.y - otherNode.y) === 1
-}
-
-export const canContinueStraight = (node: Location, rotation: Rotation, visited: VisitedNode[][]): boolean => {
-  const nextNode = rotationToPosition(rotation, node)
-  if (visited[node.x][node.y]['nextTo'].find((n) => n.x === nextNode.x && n.y === nextNode.y)) {
-    return true
-  }
-  return false
 }

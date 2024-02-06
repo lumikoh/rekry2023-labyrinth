@@ -1,8 +1,20 @@
 import type { Rotation, Location, VisitedNode } from '../types.js'
-import { canContinueStraight, determineRotation } from './calculations.js'
+import { determineRotation } from './calculations.js'
 
-let maxDistance: number = 999999999
+// Arbitrary number that is large enough, could be max int as well
+const maxDistance: number = 999999999
 
+/**
+ * Checks if a node is surrounded by nodes that have already been checked.
+ * If that is the case, it is redundant to visit it anymore as all of it's
+ * connections are already known.
+ * @param node the Location that needs to be checked
+ * @param columns number of columns in the game
+ * @param rows number of rows in the game
+ * @param visited 2D array of visited nodes
+ * @param unvisited an array of unvisited Locations
+ * @returns true if node is surrounded by visited nodes, false otherwise
+ */
 const isNodeSurrounded = (
   node: Location,
   columns: number,
@@ -38,6 +50,20 @@ const isNodeSurrounded = (
   return true
 }
 
+/**
+ * A modified dijkstra's algorithm between two points that considers the
+ * actions needed for rotations. In the context of this project, it's used
+ * to find a route between the start and the goal, but it works for any
+ * nodes as long as a connection exists.
+ * @param start starting Location
+ * @param end end Location
+ * @param columns number of columns in the game
+ * @param rows number rows in the game
+ * @param rotation starting Rotation
+ * @param visited 2D array of visited nodes
+ * @returns an array of Locations that represents the route, or null if no
+ * route was found
+ */
 export const dijkstraTwoPoints = (
   start: Location,
   end: Location,
@@ -83,21 +109,24 @@ export const dijkstraTwoPoints = (
       }
     }
     q.sort((a, b) => {
-      if (a.distance - b.distance !== 0) {
-        return a.distance - b.distance
-      }
-      if (canContinueStraight(a.node, a.rotation, visited)) {
-        return -0.5
-      } else if (canContinueStraight(b.node, b.rotation, visited)) {
-        return 0.5
-      } else {
-        return 0
-      }
+      return a.distance - b.distance
     })
   }
   return null
 }
 
+/**
+ * Finds the closest unvisited node using a modified dijkstra's algorithm that
+ * considers the Actions needed for Rotations.
+ * @param start starting Location
+ * @param columns number columns in the game
+ * @param rows number rows in the game
+ * @param rotation starting Rotation
+ * @param visited 2D array of visited nodes
+ * @param unvisited an array of unvisited Locations
+ * @returns an array of Locations that represents the route, or null if no
+ * route was found
+ */
 export const dijkstraNearest = (
   start: Location,
   columns: number,
